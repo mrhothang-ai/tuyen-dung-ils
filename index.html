@@ -1015,6 +1015,25 @@ function renderFunnel(){
       <div class="fright"><b>${v}</b> người</div></div>`);
   });
 }
+function daily15(chan){
+  const end=dateOf(curDate)||nowD(); const days=[];
+  for(let i=14;i>=0;i--){ const d=new Date(end); d.setDate(d.getDate()-i); days.push(d); }
+  return days.map(d=>{ const key=fmtdm(d);
+    const v=RECORDS.filter(r=>r.camp===curCamp && r.chan===chan && r.stage==="hired" && r.hireDate===key).length;
+    return {d:key, dd:d.getDate(), v}; });
+}
+function miniBars(series){
+  const W=620,H=96,padT=16,padB=16,padL=4,padR=4;
+  const n=series.length, max=Math.max(1,...series.map(s=>s.v));
+  const bw=(W-padL-padR)/n*0.62, X=i=>padL+(i+0.5)/n*(W-padL-padR), y0=H-padB, Y=v=>padT+(1-v/(max*1.25))*(H-padT-padB);
+  let out="";
+  series.forEach((s,i)=>{ const h=Math.max(0,y0-Y(s.v));
+    out+=`<rect x="${(X(i)-bw/2).toFixed(1)}" y="${Y(s.v).toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="${s.v?'#1A4F8A':'#E3E8EE'}"><title>${s.d}: ${s.v} đi làm</title></rect>`;
+    if(s.v) out+=`<text x="${X(i).toFixed(1)}" y="${(Y(s.v)-3).toFixed(1)}" text-anchor="middle" style="font:700 9px Archivo;fill:#1C2733">${s.v}</text>`;
+    if(i%3===0||i===n-1) out+=`<text x="${X(i).toFixed(1)}" y="${H-4}" text-anchor="middle" style="font:400 8.5px Inter;fill:#94A3B8">${s.dd}</text>`;
+  });
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:96px;display:block">${out}</svg>`;
+}
 function renderChannels(){
   const box=document.getElementById("chans"); box.innerHTML="";
   CH_ORDER.forEach((c,i)=>{
@@ -1030,9 +1049,12 @@ function renderChannels(){
     box.appendChild(row);
     row.onclick=()=>document.getElementById("cdet-"+i).classList.toggle("open");
     const det=document.createElement("div"); det.className="ddet"; det.id="cdet-"+i;
-    det.innerHTML=`<table><tr><th>Bước phễu</th><th class="n">Số lượng</th><th class="n">Chuyển đổi</th></tr>`+
+    det.innerHTML=`<div style="display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap">`+
+      `<div><table><tr><th>Bước phễu</th><th class="n">Số lượng</th><th class="n">Chuyển đổi</th></tr>`+
       STAGES.map((s,si)=>{ const v=stageCount(c,s[0]); const conv=si>0?pct0(v/Math.max(stageCount(c,STAGE_KEYS[si-1]),1)):"—";
-        return `<tr><td>${s[1]}</td><td class="n">${v}</td><td class="n c-mut">${conv}</td></tr>`; }).join("")+`</table>`;
+        return `<tr><td>${s[1]}</td><td class="n">${v}</td><td class="n c-mut">${conv}</td></tr>`; }).join("")+`</table></div>`+
+      `<div style="flex:1;min-width:300px"><div style="font-size:11.5px;color:var(--muted);margin-bottom:4px">Đi làm mới mỗi ngày · 15 ngày gần nhất</div>${miniBars(daily15(c))}</div>`+
+      `</div>`;
     box.appendChild(det);
   });
 }
